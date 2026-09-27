@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  
+  <!-- Header -->
+  <div style="margin-bottom: var(--space-6);">
+    <a href="/dashboard" class="btn btn-secondary btn-sm" style="margin-bottom: 12px; display: inline-flex;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Dashboard
+    </a>
+    <h1 class="heading-1">Home Interior Planner</h1>
+    <p class="body-text">Plan your room and allocate your budget intelligently across verified home furnishing items.</p>
+  </div>
+
+  <form action="/planner/home" method="POST" class="planner-submit-form card" id="homePlannerForm">
+    
+    <!-- Section 1: Budget & Room -->
+    <div class="card-header" style="padding-bottom: 12px;">
+      <h2 class="heading-3">1. Budget & Room Setup</h2>
+      <p class="text-sm">Define your spending limit and target room area.</p>
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="homeBudget" class="form-label">Total Budget</label>
+        <div class="input-prefix-wrapper">
+          <span class="input-prefix">₹</span>
+          <input 
+            type="number" 
+            id="homeBudget" 
+            name="budget" 
+            class="input-control" 
+            value="50000" 
+            min="5000" 
+            step="1000" 
+            required
+          >
+        </div>
+        <span class="form-hint">Suggested: ₹25,000 to ₹1,50,000 for standard rooms</span>
+      </div>
+
+      <div class="form-group">
+        <label for="homeRoomType" class="form-label">Room Type</label>
+        <select id="homeRoomType" name="room_type" class="select-control" required>
+          <option value="Living Room" selected>Living Room</option>
+          <option value="Bedroom">Bedroom</option>
+          <option value="Dining Room">Dining Room</option>
+          <option value="Home Office">Home Office</option>
+          <option value="Kitchen">Kitchen Area</option>
+        </select>
+        <span class="form-hint">Optimizes product catalog recommendations</span>
+      </div>
+    </div>
+
+    <!-- Section 2: Item Quantities / Requirements -->
+    <div class="card-header" style="margin-top: var(--space-4); padding-bottom: 12px;">
+      <h2 class="heading-3">2. Item Requirements & Quantities</h2>
+      <p class="text-sm">Specify the number of units you require. Use the steppers below.</p>
+    </div>
+
+    <div class="quantity-grid" style="margin-bottom: var(--space-8);">
+      
+      <!-- Lights -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Ceiling & Spot Lights</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">Ambient / Accent lights</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease lights">−</button>
+          <input type="number" name="lights" value="4" min="0" max="20" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase lights">+</button>
+        </div>
+      </div>
+
+      <!-- Ceiling Fans -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Ceiling Fans</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">BLDC / High air-flow</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease ceiling fans">−</button>
+          <input type="number" name="ceiling_fans" value="2" min="0" max="10" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase ceiling fans">+</button>
+        </div>
+      </div>
+
+      <!-- Sofa -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Sofa / Seating Unit</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">Sectional or loveseat</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease sofa">−</button>
+          <input type="number" name="sofa" value="1" min="0" max="4" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase sofa">+</button>
+        </div>
+      </div>
+
+      <!-- Dining Table -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Dining Table Set</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">Solid wood / Compact</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease dining table">−</button>
+          <input type="number" name="dining_table" value="1" min="0" max="4" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase dining table">+</button>
+        </div>
+      </div>
+
+      <!-- Storage -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Storage & Wardrobes</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">TV unit / Bookcase / Closet</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease storage">−</button>
+          <input type="number" name="storage" value="2" min="0" max="10" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase storage">+</button>
+        </div>
+      </div>
+
+      <!-- Decorations -->
+      <div class="quantity-item">
+        <div class="quantity-label">
+          <span>Decorations & Rugs</span>
+          <span class="text-xs" style="display: block; color: var(--text-secondary);">Wall art, curtains, rugs</span>
+        </div>
+        <div class="quantity-stepper">
+          <button type="button" class="qty-btn qty-minus" aria-label="Decrease decorations">−</button>
+          <input type="number" name="decorations" value="3" min="0" max="15" class="qty-input" readonly>
+          <button type="button" class="qty-btn qty-plus" aria-label="Increase decorations">+</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Submit Action -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: var(--space-6);">
+      <span class="text-sm text-secondary">Ready to discover matched products within budget?</span>
+      <button type="submit" class="btn btn-primary btn-lg" id="btnSubmitHomePlan">
+        Generate Recommendations
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

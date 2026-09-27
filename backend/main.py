@@ -16,14 +16,22 @@ import gemini_utils
 import auth_utils
 
 # Directories
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BACKEND_DIR)
 
-if os.path.exists(os.path.join(BASE_DIR, "frontend", "templates")):
-    TEMPLATES_DIR = os.path.join(BASE_DIR, "frontend", "templates")
-    STATIC_DIR = os.path.join(BASE_DIR, "frontend", "static")
+# Dynamically resolve frontend templates and static assets
+if os.path.exists(os.path.join(ROOT_DIR, "frontend", "templates")):
+    TEMPLATES_DIR = os.path.join(ROOT_DIR, "frontend", "templates")
+    STATIC_DIR = os.path.join(ROOT_DIR, "frontend", "static")
+elif os.path.exists(os.path.join(BACKEND_DIR, "templates")):
+    TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
+    STATIC_DIR = os.path.join(BACKEND_DIR, "static")
+elif os.path.exists(os.path.join(ROOT_DIR, "templates")):
+    TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
+    STATIC_DIR = os.path.join(ROOT_DIR, "static")
 else:
-    TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-    STATIC_DIR = os.path.join(BASE_DIR, "static")
+    TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
+    STATIC_DIR = os.path.join(BACKEND_DIR, "static")
 
 UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
 

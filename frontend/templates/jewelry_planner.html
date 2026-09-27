@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  
+  <!-- Header -->
+  <div style="margin-bottom: var(--space-6);">
+    <a href="/dashboard" class="btn btn-secondary btn-sm" style="margin-bottom: 12px; display: inline-flex;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Dashboard
+    </a>
+    <h1 class="heading-1">Jewelry Budget Planner</h1>
+    <p class="body-text">Find jewelry that matches your occasion, style, outfit, and budget from hallmarked jewelers.</p>
+  </div>
+
+  <form action="/planner/jewelry" method="POST" enctype="multipart/form-data" class="planner-submit-form card" id="jewelryPlannerForm">
+    
+    <div class="card-header" style="padding-bottom: 12px;">
+      <h2 class="heading-3">Jewelry Criteria & Occasion</h2>
+      <p class="text-sm">Filter pieces across fine gold, uncut polki, silver, and diamond designs.</p>
+    </div>
+
+    <!-- Row 1: Budget & Occasion -->
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="jewelryBudget" class="form-label">Total Budget</label>
+        <div class="input-prefix-wrapper">
+          <span class="input-prefix">₹</span>
+          <input 
+            type="number" 
+            id="jewelryBudget" 
+            name="budget" 
+            class="input-control" 
+            value="25000" 
+            min="3000" 
+            step="1000" 
+            required
+          >
+        </div>
+        <span class="form-hint">Set your maximum purchase ceiling</span>
+      </div>
+
+      <div class="form-group">
+        <label for="jewelryOccasion" class="form-label">Occasion</label>
+        <select id="jewelryOccasion" name="occasion" class="select-control" required>
+          <option value="Wedding" selected>Wedding Ceremony</option>
+          <option value="Reception">Reception / Cocktail Gala</option>
+          <option value="Festival">Festive Puja / Diwali</option>
+          <option value="Daily Wear">Daily Wear / Office</option>
+          <option value="Party">Party / Evening Outing</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Jewelry Type & Preferred Style -->
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label for="jewelryType" class="form-label">Jewelry Category</label>
+        <select id="jewelryType" name="jewelry_type" class="select-control" required>
+          <option value="All" selected>All Matching Pieces</option>
+          <option value="Necklace">Necklace / Choker</option>
+          <option value="Earrings">Earrings / Jhumkas</option>
+          <option value="Bangles">Bangles & Bracelets</option>
+          <option value="Ring">Rings</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="preferredStyle" class="form-label">Preferred Style</label>
+        <select id="preferredStyle" name="preferred_style" class="select-control" required>
+          <option value="Traditional" selected>Traditional Indian</option>
+          <option value="Modern">Modern Contemporary</option>
+          <option value="Kundan">Kundan & Polki</option>
+          <option value="Temple">Heritage Temple</option>
+          <option value="Minimalist">Minimalist Solitaire</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="colorPref" class="form-label">Metal / Tone</label>
+        <select id="colorPref" name="color_pref" class="select-control" required>
+          <option value="Gold" selected>22K Yellow Gold</option>
+          <option value="Rose Gold">18K Rose Gold</option>
+          <option value="Silver">925 Sterling Silver</option>
+          <option value="Antique">Antique Finish</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Section 3: Professional Outfit Upload Area -->
+    <div class="card-header" style="margin-top: var(--space-4); padding-bottom: 12px;">
+      <h2 class="heading-3">Outfit Coordination (Optional)</h2>
+      <p class="text-sm">Upload a photo of your dress or saree to coordinate jewelry metal and gemstone tones.</p>
+    </div>
+
+    <div class="form-group">
+      <div class="upload-dropzone" id="outfitDropzone">
+        <div class="upload-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+        <div class="upload-text">Upload outfit image</div>
+        <div class="upload-subtext">PNG, JPG, or WEBP up to 5MB</div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnChooseImage">Choose Image</button>
+        <input type="file" id="outfitImageInput" name="outfit_image" accept="image/*" style="display: none;">
+        
+        <!-- Live Image Preview Box -->
+        <div class="image-preview-box" id="imagePreviewBox">
+          <img id="imagePreviewImg" class="image-preview-img" alt="Outfit preview">
+          <p id="fileDetails" class="text-xs" style="margin-top: 6px; font-weight: 500;"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Action -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: var(--space-6);">
+      <span class="text-sm text-secondary">Discover hallmarked jewelry pieces within budget?</span>
+      <button type="submit" class="btn btn-primary btn-lg" id="btnSubmitJewelryPlan">
+        Generate Recommendations
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

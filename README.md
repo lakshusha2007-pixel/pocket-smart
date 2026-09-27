@@ -1,6 +1,55 @@
-# PocketSmart AI — Your Smart Budget & Recommendation Assistant
+# PocketSmart — Your Smart Budget & Recommendation Assistant
 
-**PocketSmart AI** is a GenAI-powered, cross-platform recommendation SaaS application built with **FastAPI**, **Google Gemini 1.5 Flash Pro**, **Jinja2**, and **Vanilla CSS**. It transforms everyday lifestyle budgeting into an intelligent, user-friendly experience by delivering personalized, budget-strict product and service suggestions across multiple retail ecosystems: **Amazon, Flipkart, IKEA, Pepperfry, Urban Ladder, Swiggy, Zomato, OYO, Tanishq, CaratLane, and GIVA**.
+**PocketSmart** is a cross-platform budget and recommendation application built with a **separated frontend and backend architecture**:
+- **`backend/`**: High-performance FastAPI REST API, database models, Gemini foundation logic, and authentication.
+- **`frontend/`**: Clean, human-designed UI with HTML5, Jinja2 templates, and responsive Vanilla CSS.
+
+---
+
+## 📁 Separated Folder Architecture
+
+```
+NM/
+├── backend/                    # 🐍 BACKEND SERVICE LAYER
+│   ├── main.py                 # FastAPI application & REST API routes
+│   ├── database.py             # SQLite database & /tmp serverless handling
+│   ├── gemini_utils.py         # Gemini prompt orchestration & retailer links
+│   ├── recommender.py          # Domain catalogs (Home, Party, Jewelry) & budget logic
+│   ├── auth_utils.py           # RFC 7519 HS256 JWT token generation & verification
+│   ├── pocketsmart.db          # Database with preloaded demo data
+│   ├── test_app.py             # Backend automated test suite (11 unit tests)
+│   ├── requirements.txt        # Backend dependencies
+│   ├── Dockerfile              # Backend container build
+│   ├── Procfile                # Render start command
+│   ├── .dockerignore
+│   ├── .env.example
+│   └── README.md
+│
+├── frontend/                   # 🎨 FRONTEND PRESENTATION LAYER
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── styles.css      # Design system stylesheet (Inter, #2563EB primary)
+│   │   ├── js/
+│   │   │   └── main.js         # Interactive calculators, steppers & modals
+│   │   └── uploads/            # Uploaded outfit reference images
+│   ├── templates/
+│   │   ├── base.html           # Master layout template
+│   │   ├── index.html          # Landing page & budget simulator
+│   │   ├── dashboard.html      # Spending overview & active plans
+│   │   ├── home_planner.html   # Home Interior budget planner
+│   │   ├── party_planner.html  # Party & Event budget planner
+│   │   ├── jewelry_planner.html# Fine Jewelry budget planner
+│   │   ├── recommendations.html# Curated product cards & retailer links
+│   │   ├── history.html        # Historical planning records
+│   │   ├── login.html          # Authentication sign-in
+│   │   └── register.html       # User registration
+│   └── README.md
+│
+├── render.yaml                 # Render Blueprint (points to backend/)
+├── vercel.json                 # Vercel deployment configuration
+├── package.json                # Project scripts (dev, test, deploy)
+└── README.md                   # Master documentation
+```
 
 ---
 
@@ -11,12 +60,12 @@
    - Quantity configuration for BLDC silent fans, drop pendant lights, sofas, solid wood dining tables, storage wardrobes, and wall art.
    - Sourced from **IKEA, Amazon, Pepperfry, and Urban Ladder**.
 
-2. **AI-Based Party Budget Planning (`/planner/party`, `/generate-party`)**:
+2. **Party Budget Planning (`/planner/party`, `/generate-party`)**:
    - Total budget allocation based on guest count, event type (Birthday, Anniversary, Corporate), and venue.
    - Automatic per-guest catering formulas (**Swiggy Catering / Zomato Events**), designer specialty cakes (**Ferns N Petals / Bakingo**), theme decor, and sound AV packages.
 
 3. **Jewelry Recommendations for Occasions (`/planner/jewelry`, `/generate-jewelry`)**:
-   - Multimodal AI: Upload outfit photos to analyze palette harmony, neckline aesthetics, and metal accents.
+   - Outfit photo upload to analyze color coordination and neckline style.
    - Hallmarked gold, uncut Kundan Polki, diamonds, and 925 sterling silver from **Tanishq, CaratLane, Kalyan Jewellers, and GIVA**.
 
 4. **Recommendation Engine & Verified Retailer Links (`/recommendations/{id}`)**:
@@ -30,49 +79,35 @@
 
 ---
 
-## 🏗️ Architecture & Technology Stack
+## 🚀 Running the Project
 
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Backend Framework** | FastAPI (Python 3.10+) | High-performance asynchronous REST & template routing |
-| **AI Foundation Model** | Google Gemini 1.5 Flash Pro | Multimodal text & image reasoning with fallback catalog |
-| **Frontend UI** | HTML5, Jinja2, Vanilla CSS, JS | Zero-gradient enterprise design system, Inter typography |
-| **Database** | SQLite3 (`pocketsmart.db`) | Automatic `/tmp` migration for serverless (Vercel) & local |
-| **Deployments** | Render CLI & Vercel CLI | Native support with `render.yaml`, `Procfile`, `vercel.json` |
-
----
-
-## 🚀 Local Development Setup
-
-### 1. Clone & Install Dependencies
+### Option A: Run Full Stack from Root
 ```bash
+# 1. Install dependencies
+pip install -r backend/requirements.txt
+
+# 2. Run development server (serves both backend API and frontend UI)
+npm run dev
+# OR:
+python backend/main.py
+```
+Open **http://127.0.0.1:8080** or **http://localhost:8080** in your browser.
+
+### Option B: Run Backend Only
+```bash
+cd backend
 pip install -r requirements.txt
-```
-
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-# Optional: add your Gemini API key (free from https://aistudio.google.com/)
-GEMINI_API_KEY=your_gemini_api_key_here
-SESSION_SECRET=your_super_secret_session_key
-PORT=8080
-```
-*(Note: If `GEMINI_API_KEY` is not provided, the system gracefully falls back to the deterministic catalog engine with realistic platform links!)*
-
-### 3. Run Application
-```bash
 python main.py
 ```
-Or with Uvicorn directly:
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
-```
-Access the application at **http://127.0.0.1:8080**.
 
-### 4. Run Automated Test Suite
+### Option C: Run Automated Tests
 ```bash
-python test_app.py
+# Run backend tests
+python backend/test_app.py
+# OR from root:
+npm test
 ```
+*Output: `Ran 11 tests in 0.55s — OK`*
 
 ---
 
@@ -84,103 +119,43 @@ python test_app.py
 
 ---
 
-## ☁️ Deployment Guide 1: Deploy with Render CLI
+## ☁️ Deployment Guide 1: Deploy Backend with Render CLI
 
-PocketSmart AI includes **`render.yaml`** (Render Blueprint), **`Procfile`**, and **`Dockerfile`** for 1-click deployment on Render.
+The backend is configured with **`backend/Dockerfile`**, **`backend/Procfile`**, and root **`render.yaml`** (pointing to `rootDir: backend`).
 
-### Method A: Using Render CLI (Recommended)
+```powershell
+# 1. Install Render CLI
+npm install -g @renderinc/cli
 
-1. **Install Render CLI**:
-   ```bash
-   npm install -g @renderinc/cli
-   ```
-   *(Or download binary from [render.com/docs/cli](https://render.com/docs/cli))*
+# 2. Login
+render login
 
-2. **Authenticate with Render**:
-   ```bash
-   render login
-   ```
-
-3. **Deploy using Render Blueprint (`render.yaml`)**:
-   Make sure your code is committed to a Git repository (GitHub/GitLab):
-   ```bash
-   git add .
-   git commit -m "Configure PocketSmart AI for Render and Vercel"
-   git push origin main
-   ```
-   Then launch the blueprint:
-   ```bash
-   render blueprint launch
-   ```
-
-4. **Or Create Web Service Directly via Render CLI**:
-   ```bash
-   render services create \
-     --name pocketsmart-ai \
-     --type web \
-     --runtime python \
-     --repo <YOUR_GITHUB_REPO_URL> \
-     --branch main \
-     --buildCommand "pip install -r requirements.txt" \
-     --startCommand "uvicorn main:app --host 0.0.0.0 --port \$PORT"
-   ```
-
-5. **Set Environment Variables on Render**:
-   ```bash
-   render env-vars set GEMINI_API_KEY your_gemini_api_key_here
-   render env-vars set SESSION_SECRET a_very_long_secure_random_string_9912
-   ```
-
-6. **View Deployment Logs**:
-   ```bash
-   render logs -s pocketsmart-ai --tail
-   ```
+# 3. Deploy via Blueprint
+git add .
+git commit -m "Deploy separated backend"
+git push origin main
+render blueprint launch
+```
 
 ---
 
 ## ▲ Deployment Guide 2: Deploy with Vercel CLI
 
-PocketSmart AI is pre-configured with **`vercel.json`**, **`api/index.py`**, and **serverless `/tmp` database path management** for seamless zero-config deployment on Vercel.
+The project is configured with **`vercel.json`** and **`api/index.py`**:
 
-### Step-by-Step Vercel CLI Instructions
+```powershell
+# 1. Install Vercel CLI
+npm install -g vercel
 
-1. **Install Vercel CLI**:
-   ```bash
-   npm install -g vercel
-   ```
+# 2. Login
+vercel login
 
-2. **Login to Vercel**:
-   ```bash
-   vercel login
-   ```
+# 3. Link project
+vercel link
 
-3. **Link Your Project**:
-   Run in the project directory (`NM`):
-   ```bash
-   vercel link
-   ```
-   Follow the prompts to connect or create a new Vercel project.
-
-4. **Add Environment Variables (Optional for Gemini)**:
-   ```bash
-   vercel env add GEMINI_API_KEY
-   # Select 'Production', 'Preview', and 'Development', then enter your key
-   ```
-
-5. **Deploy Preview**:
-   ```bash
-   vercel
-   ```
-
-6. **Deploy Directly to Production**:
-   ```bash
-   vercel --prod
-   ```
-
-7. **Inspect Deployment**:
-   ```bash
-   vercel inspect --prod
-   ```
+# 4. Deploy to production
+vercel --prod
+```
 
 ---
 
@@ -192,11 +167,11 @@ PocketSmart AI is pre-configured with **`vercel.json`**, **`api/index.py`**, and
 | `GET` | `/dashboard` | User dashboard with budget KPIs and quick action cards |
 | `GET/POST`| `/generate-home` | Home Interior Planner (accepts Form data or JSON) |
 | `GET/POST`| `/generate-party` | Party Budget Planner (accepts Form data or JSON) |
-| `GET/POST`| `/generate-jewelry` | Multimodal Jewelry Planner (accepts Form data, JSON, or outfit photo upload) |
+| `GET/POST`| `/generate-jewelry` | Jewelry Planner (accepts Form data, JSON, or outfit photo upload) |
 | `POST` | `/token` | Issues RFC 7519 HS256 JWT access token for API clients |
 | `GET` | `/session-info` | Current user session metadata and login state |
 | `GET` | `/session-data` | Detailed user session data, metrics, and plan history |
-| `GET/POST`| `/recommendations-details` | General detailed AI product recommendations |
+| `GET/POST`| `/recommendations-details` | General detailed product recommendations |
 | `GET` | `/recommendations/{id}` | Detailed recommendation breakdown & verified retailer links |
 | `GET` | `/history` | Historical planning records (HTML view or JSON API) |
-| `GET` | `/health` / `/startup` | Health check, Gemini AI connection test, and database status |
+| `GET` | `/health` / `/startup` | Health check and platform connectivity check |

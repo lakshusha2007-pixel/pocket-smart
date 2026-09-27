@@ -1,12 +1,14 @@
 {
-  "name": "pocketsmart-ai",
+  "name": "pocketsmart",
   "version": "1.0.0",
-  "description": "PocketSmart AI — Smart Budget & Recommendation Assistant (FastAPI + Jinja2 + Google Gemini 1.5 Flash Pro)",
+  "description": "PocketSmart — Smart Budget & Recommendation Assistant (Separated Frontend & Backend)",
   "scripts": {
-    "dev": "python main.py",
-    "start": "python main.py",
-    "server": "python -m uvicorn main:app --host 127.0.0.1 --port 8080 --reload",
-    "test": "python test_app.py",
+    "dev": "python backend/main.py",
+    "start": "python backend/main.py",
+    "server": "python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 --reload",
+    "test": "python backend/test_app.py",
+    "dev:backend": "python backend/main.py",
+    "test:backend": "python backend/test_app.py",
     "deploy:vercel": "vercel",
     "deploy:vercel:prod": "vercel --prod",
     "deploy:render": "render blueprint launch"
@@ -15,7 +17,6 @@
     "pocketsmart",
     "budgeting",
     "fastapi",
-    "gemini",
     "recommendations",
     "render",
     "vercel"

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title or "PocketSmart AI — Smart Budget & Recommendation Assistant" }}</title>
+  <meta name="description" content="Intelligent budget allocation and curated product recommendations for home interiors, parties, and jewelry.">
+  
+  <!-- Modern Clean Typography: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Design System Stylesheet -->
+  <link rel="stylesheet" href="/static/css/styles.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <!-- Brand Logo & Title -->
+      <a href="/dashboard" class="brand-wrapper" id="brandLogo">
+        <div class="brand-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
+          </svg>
+        </div>
+        <div class="brand-text-col">
+          <span class="brand-title">PocketSmart<span>AI</span></span>
+          <span class="brand-subtitle">Smart Budget Planning</span>
+        </div>
+      </a>
+
+      {% if user %}
+      <!-- Desktop Navigation Links -->
+      <nav class="nav-links" aria-label="Main Navigation">
+        <a href="/dashboard" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" id="navDashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </a>
+        <a href="/planner/home" class="nav-link {% if active_tab == 'home_planner' %}active{% endif %}" id="navHomePlanner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Home Planner
+        </a>
+        <a href="/planner/party" class="nav-link {% if active_tab == 'party_planner' %}active{% endif %}" id="navPartyPlanner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          Party Planner
+        </a>
+        <a href="/planner/jewelry" class="nav-link {% if active_tab == 'jewelry_planner' %}active{% endif %}" id="navJewelryPlanner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"></path><path d="M11 3 8 9l4 13 4-13-3-6"></path><path d="M2 9h20"></path></svg>
+          Jewelry Planner
+        </a>
+        <a href="/history" class="nav-link {% if active_tab == 'history' %}active{% endif %}" id="navHistory">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          History
+        </a>
+      </nav>
+
+      <!-- Right User Profile & Logout -->
+      <div class="nav-user">
+        <div class="user-badge" id="userProfileBadge">
+          <div class="user-avatar-initials">{{ user.name[:1] }}</div>
+          <span>{{ user.name }}</span>
+        </div>
+        <a href="/logout" class="logout-link" id="navLogout">Sign out</a>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="mobile-toggle" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      {% else %}
+      <div class="nav-user">
+        <a href="/login" class="btn btn-secondary btn-sm" id="navSignIn">Sign In</a>
+        <a href="/register" class="btn btn-primary btn-sm" id="navRegister">Create Account</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if user %}
+    <!-- Mobile Navigation Drawer -->
+    <div class="mobile-menu-drawer" id="mobileNavDrawer">
+      <a href="/dashboard" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="/planner/home" class="nav-link {% if active_tab == 'home_planner' %}active{% endif %}">Home Planner</a>
+      <a href="/planner/party" class="nav-link {% if active_tab == 'party_planner' %}active{% endif %}">Party Planner</a>
+      <a href="/planner/jewelry" class="nav-link {% if active_tab == 'jewelry_planner' %}active{% endif %}">Jewelry Planner</a>
+      <a href="/history" class="nav-link {% if active_tab == 'history' %}active{% endif %}">History</a>
+      <div style="padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span class="text-sm">Signed in as <strong>{{ user.name }}</strong></span>
+        <a href="/logout" class="btn btn-danger-light btn-sm">Sign out</a>
+      </div>
+    </div>
+    {% endif %}
+  </header>
+
+  <!-- Main View Container -->
+  <main class="main-content">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Professional Minimal Loading Modal -->
+  <div class="modal-overlay" id="loadingOverlay" role="dialog" aria-modal="true" aria-labelledby="loadingModalTitle">
+    <div class="loading-modal-card">
+      <div class="clean-spinner"></div>
+      <h3 id="loadingModalTitle" class="heading-3" style="margin-bottom: 6px;">Generating recommendations...</h3>
+      <p class="text-sm">Please wait while our recommendation engine processes your budget allocations.</p>
+      
+      <ul class="loading-steps-list">
+        <li class="loading-step-item" id="loadStep1">
+          <span class="step-bullet">1</span>
+          <span>Analyzing your budget limits</span>
+        </li>
+        <li class="loading-step-item" id="loadStep2">
+          <span class="step-bullet">2</span>
+          <span>Finding suitable product catalog options</span>
+        </li>
+        <li class="loading-step-item" id="loadStep3">
+          <span class="step-bullet">3</span>
+          <span>Preparing your personalized recommendations</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Product Details Modal -->
+  <div class="modal-overlay" id="productModal" role="dialog" aria-modal="true">
+    <div class="loading-modal-card" style="text-align: left; max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <span id="modalProductPlatform" class="badge badge-info">Platform</span>
+        <button onclick="closeProductModal()" class="btn btn-secondary btn-sm" style="padding: 4px 8px; border: none;">✕</button>
+      </div>
+      <img id="modalProductImage" src="" alt="Product Image" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border);">
+      <h3 id="modalProductTitle" class="heading-3" style="margin-bottom: 4px;"></h3>
+      <p id="modalProductCategory" class="text-xs text-muted" style="margin-bottom: 12px; text-transform: uppercase; font-weight: 600;"></p>
+      <div id="modalProductPrice" style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;"></div>
+      <div class="card" style="background-color: var(--bg-main); padding: 12px; margin-bottom: 16px; border: 1px solid var(--border);">
+        <p class="text-xs" style="font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px;">Recommendation Reason</p>
+        <p id="modalProductReason" class="text-sm" style="color: var(--text-primary);"></p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="closeProductModal()" class="btn btn-secondary" style="flex: 1;">Close</button>
+        <button onclick="visitRetailerFromModal()" class="btn btn-primary" style="flex: 1;">Visit Retailer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-col">
+        <p class="text-sm">© 2026 <strong>PocketSmart AI</strong>. All rights reserved. Smart Budget & Product Recommendation Assistant.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/planner/home">Home</a></li>
+        <li><a href="/planner/party">Party</a></li>
+        <li><a href="/planner/jewelry">Jewelry</a></li>
+        <li><a href="/history">History</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="/static/js/main.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

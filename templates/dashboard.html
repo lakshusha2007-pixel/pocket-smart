@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1 class="heading-1">Welcome back, {{ user.name }}</h1>
+  <p class="body-text">Plan your spending smarter with PocketSmart AI.</p>
+</div>
+
+<!-- Overview Stats Banner -->
+<section class="stats-grid" aria-label="Budget Overview Statistics">
+  <div class="stat-card">
+    <div class="stat-label">Active Plans Created</div>
+    <div class="stat-value" id="statTotalPlans">{{ stats.total_plans }}</div>
+    <div class="stat-meta">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>Across all planner modules</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Total Budget Managed</div>
+    <div class="stat-value" id="statTotalBudgeted">₹{{ "{:,.0f}".format(stats.total_budgeted) }}</div>
+    <div class="stat-meta" style="color: var(--text-secondary);">
+      <span>Allocated spending pools</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Smart Savings Retained</div>
+    <div class="stat-value" style="color: var(--success);" id="statTotalSaved">₹{{ "{:,.0f}".format(stats.total_saved) }}</div>
+    <div class="stat-meta">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+      <span>Optimized surplus funds</span>
+    </div>
+  </div>
+</section>
+
+<!-- Primary Planner Modules -->
+<section style="margin-bottom: var(--space-8);">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-4);">
+    <h2 class="heading-2" style="font-size: 20px;">Planning Modules</h2>
+    <span class="text-sm">Choose a module to calculate budget and get curated options</span>
+  </div>
+
+  <div class="planner-cards-grid">
+    
+    <!-- Home Interior Card -->
+    <div class="planner-card" id="cardHomePlanner">
+      <div class="planner-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <h3 class="planner-card-title">Home Interior</h3>
+      <p class="planner-card-desc">Plan your room and allocate your budget intelligently across furniture, lighting, and decor.</p>
+      <div class="planner-card-action">
+        <a href="/planner/home" class="btn btn-primary btn-block" id="btnStartHomePlan">
+          Start Planning
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Party Planner Card -->
+    <div class="planner-card" id="cardPartyPlanner">
+      <div class="planner-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </div>
+      <h3 class="planner-card-title">Party Planner</h3>
+      <p class="planner-card-desc">Organize your event without overspending with per-guest catering, cakes, and decor estimates.</p>
+      <div class="planner-card-action">
+        <a href="/planner/party" class="btn btn-primary btn-block" id="btnStartPartyPlan">
+          Start Planning
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Jewelry Planner Card -->
+    <div class="planner-card" id="cardJewelryPlanner">
+      <div class="planner-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3h12l4 6-10 13L2 9Z"></path>
+          <path d="M11 3 8 9l4 13 4-13-3-6"></path>
+          <path d="M2 9h20"></path>
+        </svg>
+      </div>
+      <h3 class="planner-card-title">Jewelry Planner</h3>
+      <p class="planner-card-desc">Find jewelry that matches your occasion and budget with optional outfit photo coordination.</p>
+      <div class="planner-card-action">
+        <a href="/planner/jewelry" class="btn btn-primary btn-block" id="btnStartJewelryPlan">
+          Start Planning
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Recent Planning Sessions -->
+<section>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+    <h2 class="heading-2" style="font-size: 20px;">Recent Sessions</h2>
+    <a href="/history" class="btn btn-secondary btn-sm" id="btnViewAllHistory">View All History</a>
+  </div>
+
+  {% if recent_history %}
+  <div class="history-table-wrapper">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Plan Title</th>
+          <th>Module</th>
+          <th>Allocated Budget</th>
+          <th>Estimated Cost</th>
+          <th>Remaining</th>
+          <th>Status</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_history %}
+        <tr>
+          <td class="text-sm text-secondary">{{ item.created_at[:10] }}</td>
+          <td><strong>{{ item.title }}</strong></td>
+          <td><span class="badge badge-neutral">{{ item.planner_type }}</span></td>
+          <td>₹{{ "{:,.0f}".format(item.budget) }}</td>
+          <td>₹{{ "{:,.0f}".format(item.estimated_cost) }}</td>
+          <td style="color: var(--success); font-weight: 600;">₹{{ "{:,.0f}".format(item.remaining) }}</td>
+          <td><span class="badge badge-success">{{ item.status }}</span></td>
+          <td style="text-align: right;">
+            <a href="/recommendations/{{ item.id }}" class="btn btn-secondary btn-sm">View Plan</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    </div>
+    <h3 class="empty-state-title">No planning sessions yet</h3>
+    <p class="empty-state-desc">Choose one of the planner modules above to create your first budget plan.</p>
+    <a href="/planner/home" class="btn btn-primary">Start Planning</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

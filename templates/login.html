@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-split-card">
+    
+    <!-- Left Side: Brand & Value Proposition -->
+    <div class="auth-side-panel">
+      <div>
+        <div class="auth-side-brand">
+          <div class="brand-logo-icon" style="width: 40px; height: 40px; margin-bottom: 12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path>
+              <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
+            </svg>
+          </div>
+          <h2 class="heading-2" style="font-size: 22px; margin-bottom: 6px;">PocketSmart AI</h2>
+          <p class="body-text" style="font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px;">Plan smarter.</p>
+          <p class="body-text" style="font-size: 16px; font-weight: 500; color: var(--primary);">Spend better.</p>
+        </div>
+
+        <ul class="auth-value-props" style="margin-top: 32px;">
+          <li class="auth-prop-item">
+            <svg class="auth-prop-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Intelligent budget breakdown with real-time remaining calculations.</span>
+          </li>
+          <li class="auth-prop-item">
+            <svg class="auth-prop-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Verified retail items from IKEA, Pepperfry, Tanishq, and top platforms.</span>
+          </li>
+          <li class="auth-prop-item">
+            <svg class="auth-prop-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Specialized planning engines for Home Interiors, Events & Jewelry.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 32px;">
+        <span class="text-xs">Demo Credentials: <strong>demo@pocketsmart.ai</strong> / <strong>demo1234</strong></span>
+      </div>
+    </div>
+
+    <!-- Right Side: Clean Authentication Form Card -->
+    <div class="auth-form-panel">
+      <div class="auth-header">
+        <h1 class="heading-1" style="font-size: 26px;">Welcome back</h1>
+        <p class="body-text" style="font-size: 14px;">Sign in to access your budget dashboard and saved plans.</p>
+      </div>
+
+      {% if error %}
+      <div class="alert alert-error" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {% if message %}
+      <div class="alert alert-success" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>{{ message }}</span>
+      </div>
+      {% endif %}
+
+      <form action="/login" method="POST" novalidate>
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">Email address</label>
+          <input 
+            type="email" 
+            id="loginEmail" 
+            name="email" 
+            class="input-control" 
+            placeholder="you@example.com" 
+            value="{{ email or 'demo@pocketsmart.ai' }}" 
+            required 
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label for="loginPassword" class="form-label" style="margin-bottom: 0;">Password</label>
+            <a href="#" onclick="alert('For demo accounts, use password: demo1234'); return false;" class="text-xs" style="color: var(--primary);">Forgot password?</a>
+          </div>
+          <input 
+            type="password" 
+            id="loginPassword" 
+            name="password" 
+            class="input-control" 
+            placeholder="••••••••" 
+            value="demo1234" 
+            required 
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSignInSubmit" style="margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p class="text-sm">Don't have an account? <a href="/register" style="font-weight: 600;">Create account</a></p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  
+  <!-- Header -->
+  <div style="margin-bottom: var(--space-6);">
+    <a href="/dashboard" class="btn btn-secondary btn-sm" style="margin-bottom: 12px; display: inline-flex;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Dashboard
+    </a>
+    <h1 class="heading-1">Party Budget Planner</h1>
+    <p class="body-text">Plan your event while keeping every expense within budget with realistic catering and theme estimates.</p>
+  </div>
+
+  <form action="/planner/party" method="POST" class="planner-submit-form card" id="partyPlannerForm">
+    
+    <div class="card-header" style="padding-bottom: 12px;">
+      <h2 class="heading-3">Event Specifications & Capacity</h2>
+      <p class="text-sm">Configure event parameters to calculate realistic catering and logistics packages.</p>
+    </div>
+
+    <!-- Row 1: Budget & Guest Count -->
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="partyBudget" class="form-label">Total Budget</label>
+        <div class="input-prefix-wrapper">
+          <span class="input-prefix">₹</span>
+          <input 
+            type="number" 
+            id="partyBudget" 
+            name="budget" 
+            class="input-control" 
+            value="30000" 
+            min="5000" 
+            step="1000" 
+            required
+          >
+        </div>
+        <span class="form-hint">Overall spending cap for food, cake, decor, and audio</span>
+      </div>
+
+      <div class="form-group">
+        <label for="guestCount" class="form-label">Guest Count</label>
+        <input 
+          type="number" 
+          id="guestCount" 
+          name="guest_count" 
+          class="input-control" 
+          value="45" 
+          min="5" 
+          max="500" 
+          required
+        >
+        <span class="form-hint">Used for accurate per-plate catering formulas</span>
+      </div>
+    </div>
+
+    <!-- Row 2: Event Type & Venue -->
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="eventType" class="form-label">Event Type</label>
+        <select id="eventType" name="event_type" class="select-control" required>
+          <option value="Birthday" selected>Birthday Celebration</option>
+          <option value="Anniversary">Anniversary</option>
+          <option value="Cocktail Party">Cocktail / Evening Social</option>
+          <option value="Housewarming">Housewarming Gathering</option>
+          <option value="Baby Shower">Baby Shower</option>
+          <option value="Graduation">Graduation / Milestone Party</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="partyVenue" class="form-label">Venue Location</label>
+        <select id="partyVenue" name="venue" class="select-control" required>
+          <option value="Home / Backyard" selected>Home Lounge / Backyard</option>
+          <option value="Banquet Hall">Banquet Hall / Community Center</option>
+          <option value="Rooftop">Rooftop Lounge</option>
+          <option value="Outdoor Park / Lawn">Outdoor Park / Lawn</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 3: Food & Decoration Preferences -->
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="foodPref" class="form-label">Food Preference</label>
+        <select id="foodPref" name="food_pref" class="select-control" required>
+          <option value="Buffet Dinner + Starters" selected>Multi-Cuisine Buffet (Appetizers + Mains + Dessert)</option>
+          <option value="Finger Foods & Canapes">Finger Foods, Sliders & Canapés Platter</option>
+          <option value="Traditional Thali Feast">Traditional Regional Feast (Vegetarian / Non-Veg)</option>
+        </select>
+        <span class="form-hint">Includes live service staff and clean tableware</span>
+      </div>
+
+      <div class="form-group">
+        <label for="decorPref" class="form-label">Decoration Preference</label>
+        <select id="decorPref" name="decor_pref" class="select-control" required>
+          <option value="Minimalist Pastel & Balloon Garland" selected>Minimalist Pastel & Balloon Arch</option>
+          <option value="Fresh Floral Backdrop">Fresh Floral Backdrop & Ambient Accents</option>
+          <option value="Fairy Light Canopy">Warm Fairy Light Canopy & Lanterns</option>
+        </select>
+        <span class="form-hint">Customized stage and backdrop styling</span>
+      </div>
+    </div>
+
+    <!-- Submit Action -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: var(--space-6); margin-top: var(--space-4);">
+      <span class="text-sm text-secondary">Calculate catering portions and decor breakdown?</span>
+      <button type="submit" class="btn btn-primary btn-lg" id="btnSubmitPartyPlan">
+        Generate Recommendations
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+venv/
+.venv/
+test_app.py
+.dockerignore
+Dockerfile
+Procfile
+render.yaml
+*.log

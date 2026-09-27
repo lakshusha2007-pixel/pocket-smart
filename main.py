@@ -29,7 +29,7 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 init_db()
 
 app = FastAPI(
-    title="PocketSmart AI",
+    title="PocketSmart",
     description="Smart Budget & Recommendation Assistant powered by FastAPI and Google Gemini 1.5 Flash Pro",
     version="1.0.0"
 )
@@ -97,7 +97,7 @@ async def root(request: Request):
     return render(request, "index.html", {
         "user": user,
         "active_tab": "home",
-        "title": "PocketSmart AI — Smart Budget & Recommendation Assistant"
+        "title": "PocketSmart — Smart Budget & Recommendation Assistant"
     })
 
 @app.get("/login", response_class=HTMLResponse)
@@ -110,7 +110,7 @@ async def login_page(request: Request):
     return render(request, "login.html", {
         "error": error,
         "message": message,
-        "title": "Sign In — PocketSmart AI"
+        "title": "Sign In — PocketSmart"
     })
 
 @app.post("/login")
@@ -129,7 +129,7 @@ async def handle_login(request: Request, email: str = Form(None), password: str 
             return JSONResponse(status_code=400, content={"error": "Email and password are required."})
         return render(request, "login.html", {
             "error": "Email and password are required.",
-            "title": "Sign In — PocketSmart AI"
+            "title": "Sign In — PocketSmart"
         })
 
     conn = get_db_connection()
@@ -142,7 +142,7 @@ async def handle_login(request: Request, email: str = Form(None), password: str 
         return render(request, "login.html", {
             "error": "Invalid email address or password. Please try again.",
             "email": email,
-            "title": "Sign In — PocketSmart AI"
+            "title": "Sign In — PocketSmart"
         })
 
     request.session["user_id"] = user["id"]
@@ -168,7 +168,7 @@ async def register_page(request: Request):
     error = request.session.pop("flash_error", None)
     return render(request, "register.html", {
         "error": error,
-        "title": "Create Account — PocketSmart AI"
+        "title": "Create Account — PocketSmart"
     })
 
 @app.post("/register")
@@ -193,19 +193,19 @@ async def handle_register(
         err = "All fields are required."
         if is_json_request(request):
             return JSONResponse(status_code=400, content={"error": err})
-        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart AI"})
+        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart"})
 
     if password != confirm_password:
         err = "Passwords do not match."
         if is_json_request(request):
             return JSONResponse(status_code=400, content={"error": err})
-        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart AI"})
+        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart"})
 
     if len(password) < 6:
         err = "Password must be at least 6 characters."
         if is_json_request(request):
             return JSONResponse(status_code=400, content={"error": err})
-        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart AI"})
+        return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart"})
 
     conn = get_db_connection()
     existing = conn.execute("SELECT id FROM users WHERE email = ?", (email.strip().lower(),)).fetchone()
@@ -214,7 +214,7 @@ async def handle_register(
         err = "An account with this email already exists."
         if is_json_request(request):
             return JSONResponse(status_code=400, content={"error": err})
-        return render(request, "register.html", {"error": err, "name": name, "title": "Create Account — PocketSmart AI"})
+        return render(request, "register.html", {"error": err, "name": name, "title": "Create Account — PocketSmart"})
 
     pwd_hash = hash_password(password)
     cursor = conn.cursor()
@@ -350,7 +350,7 @@ async def dashboard_page(request: Request):
             "total_saved": total_saved
         },
         "recent_history": [dict(r) for r in recent_history],
-        "title": "Dashboard — PocketSmart AI"
+        "title": "Dashboard — PocketSmart"
     })
 
 # ==================== PLANNER: HOME INTERIOR ====================
@@ -365,7 +365,7 @@ async def home_planner_page(request: Request):
     return render(request, "home_planner.html", {
         "user": user,
         "active_tab": "home_planner",
-        "title": "Home Interior Planner — PocketSmart AI"
+        "title": "Home Interior Planner — PocketSmart"
     })
 
 @app.post("/planner/home")
@@ -459,7 +459,7 @@ async def party_planner_page(request: Request):
     return render(request, "party_planner.html", {
         "user": user,
         "active_tab": "party_planner",
-        "title": "Party Budget Planner — PocketSmart AI"
+        "title": "Party Budget Planner — PocketSmart"
     })
 
 @app.post("/planner/party")
@@ -543,7 +543,7 @@ async def jewelry_planner_page(request: Request):
     return render(request, "jewelry_planner.html", {
         "user": user,
         "active_tab": "jewelry_planner",
-        "title": "Jewelry Budget Planner — PocketSmart AI"
+        "title": "Jewelry Budget Planner — PocketSmart"
     })
 
 @app.post("/planner/jewelry")
@@ -690,7 +690,7 @@ async def view_recommendations(request: Request, history_id: int):
         "rec": rec_data,
         "inputs": inputs_data,
         "used_percentage": used_percentage,
-        "title": f"Recommendations: {record['title']} — PocketSmart AI"
+        "title": f"Recommendations: {record['title']} — PocketSmart"
     })
 
 # ==================== HISTORY ROUTE ====================
@@ -719,7 +719,7 @@ async def history_page(request: Request):
         "user": user,
         "active_tab": "history",
         "history": history_list,
-        "title": "Recommendation History — PocketSmart AI"
+        "title": "Recommendation History — PocketSmart"
     })
 
 @app.post("/history/delete/{history_id}")
@@ -751,7 +751,7 @@ async def startup_check():
 
     return {
         "status": "online",
-        "app": "PocketSmart AI",
+        "app": "PocketSmart",
         "database_connected": db_ok,
         "gemini_ai": gemini_status,
         "supported_platforms": [
@@ -764,4 +764,11 @@ async def startup_check():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    # On Render/cloud platforms use 0.0.0.0, locally use 127.0.0.1 so Windows browsers don't fail with ERR_ADDRESS_INVALID
+    host = os.environ.get("HOST", "0.0.0.0" if os.environ.get("RENDER") or (os.environ.get("PORT") and not os.name == 'nt') else "127.0.0.1")
+    print(f"\n=======================================================")
+    print(f"  PocketSmart is running!")
+    print(f"  Open in browser: http://127.0.0.1:{port} or http://localhost:{port}")
+    print(f"=======================================================\n")
+    uvicorn.run("main:app", host=host, port=port, reload=True)
+

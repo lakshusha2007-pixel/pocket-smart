@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "python main.py",
     "start": "python main.py",
-    "server": "python -m uvicorn main:app --host 0.0.0.0 --port 8080 --reload",
+    "server": "python -m uvicorn main:app --host 127.0.0.1 --port 8080 --reload",
     "test": "python test_app.py",
     "deploy:vercel": "vercel",
     "deploy:vercel:prod": "vercel --prod",

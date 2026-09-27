@@ -14,9 +14,9 @@ class TestPocketSmartApp(unittest.TestCase):
     def test_00_landing_page_renders(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("PocketSmart AI", response.text)
+        self.assertIn("PocketSmart", response.text)
         self.assertIn("Smart Budget Simulator", response.text)
-        self.assertIn("Three Purpose-Built AI Planners", response.text)
+        self.assertIn("Three Purpose-Built Smart Planners", response.text)
         self.assertIn("Loved by Smart Budgeters Everywhere", response.text)
         self.assertIn("IKEA", response.text)
         self.assertIn("Swiggy", response.text)

@@ -59,6 +59,18 @@ venv.bak/
 *.swp
 *.swo
 
-# Local runtime DB / uploads if needed (pocketsmart.db is seeded with demo, but writable copy)
+# SQLite database files (migrated to Firebase Firestore)
+*.db
+*.sqlite
+*.sqlite3
+pocketsmart.db
+
+# Firebase Service Account Credentials (Never commit secret keys)
+firebase-credentials.json
+serviceAccountKey.json
+firebase_key.json
+firebase-adminsdk.json
+
+# Local runtime uploads / cache
 # .vercel
 .vercel/

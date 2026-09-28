@@ -3,7 +3,7 @@ import json
 import hashlib
 import binascii
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
 try:
@@ -184,7 +184,7 @@ def get_user_by_id(user_id: Any) -> Optional[Dict[str, Any]]:
 def create_user(name: str, email: str, password_hash: str) -> Dict[str, Any]:
     clean_name = name.strip()
     clean_email = email.strip().lower()
-    created_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     user_data = {
         "name": clean_name,
@@ -221,7 +221,7 @@ def create_planning_history(
     created_at: Optional[str] = None
 ) -> str:
     if not created_at:
-        created_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     history_data = {
         "user_id": str(user_id),

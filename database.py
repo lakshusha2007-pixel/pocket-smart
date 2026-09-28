@@ -1,50 +1,30 @@
-import sqlite3
 import os
+import json
 import hashlib
 import binascii
-import json
+import uuid
 from datetime import datetime
+from typing import Optional, List, Dict, Any
+
+try:
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "pocketsmart.db")
+ROOT_DIR = os.path.dirname(BASE_DIR) if os.path.basename(BASE_DIR) == "backend" else BASE_DIR
 
-def get_database_path():
-    # Detect Vercel / AWS Lambda serverless read-only filesystem
-    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-        tmp_db = "/tmp/pocketsmart.db"
-        if not os.path.exists(tmp_db) and os.path.exists(DEFAULT_DB_PATH):
-            try:
-                shutil.copy2(DEFAULT_DB_PATH, tmp_db)
-            except Exception:
-                pass
-        return tmp_db
+# Global Firestore client and state
+_firestore_client = None
+_db_mode = "uninitialized"  # "firestore" or "local_memory"
 
-    # Verify write access to current directory
-    try:
-        test_file = os.path.join(BASE_DIR, ".write_test")
-        with open(test_file, "w") as f:
-            f.write("ok")
-        os.remove(test_file)
-        return DEFAULT_DB_PATH
-    except Exception:
-        tmp_dir = os.environ.get("TEMP", os.environ.get("TMP", "/tmp"))
-        tmp_db = os.path.join(tmp_dir, "pocketsmart.db")
-        if not os.path.exists(tmp_db) and os.path.exists(DEFAULT_DB_PATH):
-            try:
-                shutil.copy2(DEFAULT_DB_PATH, tmp_db)
-            except Exception:
-                pass
-        return tmp_db
-
-DB_PATH = get_database_path()
-
-def get_db_connection():
-    global DB_PATH
-    # Ensure parent dir exists if needed
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+# In-memory collections used when Firebase credentials are not yet supplied
+_local_db = {
+    "users": {},           # doc_id -> dict
+    "planning_history": {} # doc_id -> dict
+}
 
 def hash_password(password: str) -> str:
     salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
@@ -53,56 +33,326 @@ def hash_password(password: str) -> str:
     return (salt + pwdhash).decode('ascii')
 
 def verify_password(stored_password: str, provided_password: str) -> bool:
+    if not stored_password or len(stored_password) < 64:
+        return False
     salt = stored_password[:64]
     stored_hash = stored_password[64:]
     pwdhash = hashlib.pbkdf2_hmac('sha512', provided_password.encode('utf-8'), salt.encode('ascii'), 100000)
     pwdhash = binascii.hexlify(pwdhash).decode('ascii')
     return pwdhash == stored_hash
 
+def _find_service_account_path() -> Optional[str]:
+    # 1. Environment variable path
+    env_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
+
+    # 2. Check standard filenames in project paths
+    candidate_names = [
+        "firebase-credentials.json",
+        "serviceAccountKey.json",
+        "firebase_key.json",
+        "firebase-adminsdk.json"
+    ]
+    search_dirs = [BASE_DIR, ROOT_DIR, os.path.join(ROOT_DIR, "backend")]
+    for d in search_dirs:
+        for name in candidate_names:
+            p = os.path.join(d, name)
+            if os.path.exists(p):
+                return p
+    return None
+
+def init_firebase():
+    global _firestore_client, _db_mode
+    if _firestore_client is not None:
+        return _firestore_client
+
+    if not FIREBASE_AVAILABLE:
+        print("[Firebase] firebase-admin package not available. Using in-memory fallback store.")
+        _db_mode = "local_memory"
+        return None
+
+    # Check for direct JSON in environment variable
+    raw_env_key = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY")
+    cred = None
+
+    if raw_env_key:
+        try:
+            cert_dict = json.loads(raw_env_key)
+            cred = credentials.Certificate(cert_dict)
+        except Exception as e:
+            print(f"[Firebase] Error parsing FIREBASE_SERVICE_ACCOUNT_KEY env var: {e}")
+
+    # Check for credentials JSON file
+    if not cred:
+        key_path = _find_service_account_path()
+        if key_path:
+            try:
+                cred = credentials.Certificate(key_path)
+                print(f"[Firebase] Loaded service account key from {key_path}")
+            except Exception as e:
+                print(f"[Firebase] Error loading key file {key_path}: {e}")
+
+    # Attempt to initialize
+    try:
+        if cred:
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app(cred)
+            else:
+                firebase_admin.get_app()
+            _firestore_client = firestore.client()
+            _db_mode = "firestore"
+            print("[Firebase] Cloud Firestore successfully initialized.")
+            return _firestore_client
+        else:
+            # Check if default Google Application Credentials exist (e.g., Cloud Run / App Engine)
+            if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.environ.get("GCLOUD_PROJECT"):
+                if not firebase_admin._apps:
+                    firebase_admin.initialize_app()
+                _firestore_client = firestore.client()
+                _db_mode = "firestore"
+                print("[Firebase] Cloud Firestore initialized via Google Application Default Credentials.")
+                return _firestore_client
+    except Exception as e:
+        print(f"[Firebase] Firestore initialization failed: {e}")
+
+    print("[Firebase] No credentials found. Operating in local memory mode (ready for Firebase credentials).")
+    _db_mode = "local_memory"
+    return None
+
+def is_db_connected() -> bool:
+    return _db_mode in ("firestore", "local_memory")
+
+def get_db_mode() -> str:
+    return _db_mode
+
+def get_db_connection():
+    """Compatibility stub for previous SQLite connection."""
+    return None
+
+# ==================== DATA ACCESS LAYER (FIRESTORE / FALLBACK) ====================
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    if not email:
+        return None
+    clean_email = email.strip().lower()
+    
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            users_ref = _firestore_client.collection("users")
+            query = users_ref.where("email", "==", clean_email).limit(1).stream()
+            for doc in query:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                return data
+            return None
+        except Exception as e:
+            print(f"[Firebase] Error in get_user_by_email: {e}")
+
+    # Fallback to local store
+    for doc_id, user in _local_db["users"].items():
+        if user.get("email") == clean_email:
+            res = dict(user)
+            res["id"] = doc_id
+            return res
+    return None
+
+def get_user_by_id(user_id: Any) -> Optional[Dict[str, Any]]:
+    if not user_id:
+        return None
+    str_id = str(user_id)
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            doc = _firestore_client.collection("users").document(str_id).get()
+            if doc.exists:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                return data
+            return None
+        except Exception as e:
+            print(f"[Firebase] Error in get_user_by_id: {e}")
+
+    # Fallback to local store
+    user = _local_db["users"].get(str_id)
+    if user:
+        res = dict(user)
+        res["id"] = str_id
+        return res
+    return None
+
+def create_user(name: str, email: str, password_hash: str) -> Dict[str, Any]:
+    clean_name = name.strip()
+    clean_email = email.strip().lower()
+    created_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    user_data = {
+        "name": clean_name,
+        "email": clean_email,
+        "password_hash": password_hash,
+        "created_at": created_at
+    }
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            doc_ref = _firestore_client.collection("users").document()
+            user_data["id"] = doc_ref.id
+            doc_ref.set(user_data)
+            return user_data
+        except Exception as e:
+            print(f"[Firebase] Error creating user in Firestore: {e}")
+
+    # Fallback to local store
+    new_id = str(uuid.uuid4())[:8]
+    user_data["id"] = new_id
+    _local_db["users"][new_id] = user_data
+    return user_data
+
+def create_planning_history(
+    user_id: Any,
+    planner_type: str,
+    title: str,
+    budget: float,
+    estimated_cost: float,
+    remaining: float,
+    status: str,
+    inputs_json: str,
+    recommendations_json: str,
+    created_at: Optional[str] = None
+) -> str:
+    if not created_at:
+        created_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    history_data = {
+        "user_id": str(user_id),
+        "planner_type": planner_type,
+        "title": title,
+        "budget": float(budget),
+        "estimated_cost": float(estimated_cost),
+        "remaining": float(remaining),
+        "status": status,
+        "inputs_json": inputs_json if isinstance(inputs_json, str) else json.dumps(inputs_json),
+        "recommendations_json": recommendations_json if isinstance(recommendations_json, str) else json.dumps(recommendations_json),
+        "created_at": created_at
+    }
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            doc_ref = _firestore_client.collection("planning_history").document()
+            history_data["id"] = doc_ref.id
+            doc_ref.set(history_data)
+            return doc_ref.id
+        except Exception as e:
+            print(f"[Firebase] Error creating planning history in Firestore: {e}")
+
+    # Fallback to local store
+    new_id = str(uuid.uuid4())[:8]
+    history_data["id"] = new_id
+    _local_db["planning_history"][new_id] = history_data
+    return new_id
+
+def get_user_planning_history(user_id: Any, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    str_user_id = str(user_id)
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            ref = _firestore_client.collection("planning_history")
+            query = ref.where("user_id", "==", str_user_id).order_by("created_at", direction=firestore.Query.DESCENDING)
+            if limit:
+                query = query.limit(limit)
+            docs = query.stream()
+            results = []
+            for doc in docs:
+                item = doc.to_dict()
+                item["id"] = doc.id
+                results.append(item)
+            return results
+        except Exception as e:
+            print(f"[Firebase] Error querying planning history: {e}")
+
+    # Fallback to local store
+    matched = [
+        item for item in _local_db["planning_history"].values()
+        if str(item.get("user_id")) == str_user_id
+    ]
+    matched.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
+    if limit:
+        matched = matched[:limit]
+    return matched
+
+def get_planning_history_by_id(history_id: Any, user_id: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+    str_id = str(history_id)
+    str_user_id = str(user_id) if user_id is not None else None
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            doc = _firestore_client.collection("planning_history").document(str_id).get()
+            if doc.exists:
+                item = doc.to_dict()
+                item["id"] = doc.id
+                if str_user_id is None or str(item.get("user_id")) == str_user_id:
+                    return item
+            return None
+        except Exception as e:
+            print(f"[Firebase] Error fetching history record: {e}")
+
+    # Fallback to local store
+    item = _local_db["planning_history"].get(str_id)
+    if item:
+        if str_user_id is None or str(item.get("user_id")) == str_user_id:
+            res = dict(item)
+            res["id"] = str_id
+            return res
+    return None
+
+def delete_planning_history(history_id: Any, user_id: Any) -> bool:
+    str_id = str(history_id)
+    str_user_id = str(user_id)
+
+    if _db_mode == "firestore" and _firestore_client:
+        try:
+            doc_ref = _firestore_client.collection("planning_history").document(str_id)
+            doc = doc_ref.get()
+            if doc.exists and str(doc.to_dict().get("user_id")) == str_user_id:
+                doc_ref.delete()
+                return True
+            return False
+        except Exception as e:
+            print(f"[Firebase] Error deleting history item: {e}")
+
+    # Fallback to local store
+    item = _local_db["planning_history"].get(str_id)
+    if item and str(item.get("user_id")) == str_user_id:
+        del _local_db["planning_history"][str_id]
+        return True
+    return False
+
+def get_user_stats(user_id: Any) -> Dict[str, Any]:
+    history = get_user_planning_history(user_id)
+    total_plans = len(history)
+    total_budgeted = sum(float(h.get("budget", 0)) for h in history)
+    total_saved = sum(float(h.get("remaining", 0)) for h in history)
+    return {
+        "total_plans": total_plans,
+        "total_budgeted": total_budgeted,
+        "total_saved": total_saved
+    }
+
+# ==================== INITIALIZATION & SEEDING ====================
+
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    init_firebase()
     
-    # Users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Planning history table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS planning_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            planner_type TEXT NOT NULL,
-            title TEXT NOT NULL,
-            budget REAL NOT NULL,
-            estimated_cost REAL NOT NULL,
-            remaining REAL NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Completed',
-            inputs_json TEXT NOT NULL,
-            recommendations_json TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    """)
-    
-    # Create default demo user if empty
-    cursor.execute("SELECT id FROM users WHERE email = 'demo@pocketsmart.ai'")
-    if not cursor.fetchone():
+    # Check if demo user exists
+    demo_email = "demo@pocketsmart.ai"
+    demo_user = get_user_by_email(demo_email)
+
+    if not demo_user:
         demo_pwd_hash = hash_password("demo1234")
-        cursor.execute(
-            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-            ("Alex Johnson", "demo@pocketsmart.ai", demo_pwd_hash)
-        )
-        demo_user_id = cursor.lastrowid
-        
-        # Insert initial realistic sample history records
+        demo_user = create_user("Alex Johnson", demo_email, demo_pwd_hash)
+        demo_user_id = demo_user["id"]
+
+        # Insert realistic sample history records
         sample_home_inputs = {
             "room_type": "Living Room",
             "budget": 50000,
@@ -153,7 +403,7 @@ def init_db():
                 }
             ]
         }
-        
+
         sample_party_inputs = {
             "event_type": "Birthday",
             "budget": 30000,
@@ -208,11 +458,8 @@ def init_db():
                 }
             ]
         }
-        
-        cursor.execute("""
-            INSERT INTO planning_history (user_id, planner_type, title, budget, estimated_cost, remaining, status, inputs_json, recommendations_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+
+        create_planning_history(
             demo_user_id,
             "Home Interior",
             "Living Room Makeover",
@@ -223,12 +470,9 @@ def init_db():
             json.dumps(sample_home_inputs),
             json.dumps(sample_home_recs),
             "2026-09-25 14:30:00"
-        ))
-        
-        cursor.execute("""
-            INSERT INTO planning_history (user_id, planner_type, title, budget, estimated_cost, remaining, status, inputs_json, recommendations_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+        )
+
+        create_planning_history(
             demo_user_id,
             "Party Budget",
             "30th Birthday Celebration",
@@ -239,10 +483,8 @@ def init_db():
             json.dumps(sample_party_inputs),
             json.dumps(sample_party_recs),
             "2026-09-26 10:15:00"
-        ))
-        
-    conn.commit()
-    conn.close()
+        )
+        print("[Firebase] Seeded demo user and realistic initial history.")
 
 if __name__ == "__main__":
     init_db()

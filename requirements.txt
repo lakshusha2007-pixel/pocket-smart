@@ -8,3 +8,5 @@ httpx>=0.24.0
 google-generativeai>=0.4.0
 pyjwt>=2.8.0
 pillow>=10.0.0
+firebase-admin>=6.2.0
+

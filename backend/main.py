@@ -10,7 +10,13 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from database import init_db, get_db_connection, hash_password, verify_password
+from database import (
+    init_db, hash_password, verify_password,
+    get_user_by_id, get_user_by_email, create_user,
+    create_planning_history, get_user_planning_history,
+    get_planning_history_by_id, delete_planning_history,
+    get_user_stats, is_db_connected, get_db_connection
+)
 import recommender
 import gemini_utils
 import auth_utils
@@ -39,16 +45,16 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-# Initialize Database
+# Initialize Database (Firebase Firestore / Fallback)
 init_db()
 
 app = FastAPI(
     title="PocketSmart",
-    description="Smart Budget & Recommendation Assistant powered by FastAPI and Google Gemini 1.5 Flash Pro",
+    description="Smart Budget & Recommendation Assistant powered by FastAPI, Firebase Cloud Firestore and Google Gemini",
     version="1.0.0"
 )
 
-# CORS Middleware (Milestone 3.3)
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -78,11 +84,9 @@ def get_current_user(request: Request):
     # 1. Try session
     user_id = request.session.get("user_id")
     if user_id:
-        conn = get_db_connection()
-        user = conn.execute("SELECT id, name, email FROM users WHERE id = ?", (user_id,)).fetchone()
-        conn.close()
+        user = get_user_by_id(user_id)
         if user:
-            return dict(user)
+            return {"id": user["id"], "name": user["name"], "email": user["email"]}
 
     # 2. Try Authorization Bearer header
     auth_header = request.headers.get("Authorization")
@@ -90,11 +94,9 @@ def get_current_user(request: Request):
         token = auth_header.split(" ")[1]
         payload = auth_utils.verify_jwt_token(token)
         if payload and "sub" in payload:
-            conn = get_db_connection()
-            user = conn.execute("SELECT id, name, email FROM users WHERE id = ?", (payload["sub"],)).fetchone()
-            conn.close()
+            user = get_user_by_id(payload["sub"])
             if user:
-                return dict(user)
+                return {"id": user["id"], "name": user["name"], "email": user["email"]}
 
     return None
 
@@ -129,7 +131,6 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def handle_login(request: Request, email: str = Form(None), password: str = Form(None)):
-    # Also support JSON body
     if is_json_request(request) and not email:
         try:
             body = await request.json()
@@ -146,11 +147,9 @@ async def handle_login(request: Request, email: str = Form(None), password: str 
             "title": "Sign In — PocketSmart"
         })
 
-    conn = get_db_connection()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email.strip().lower(),)).fetchone()
-    conn.close()
+    user = get_user_by_email(email.strip().lower())
 
-    if not user or not verify_password(user["password_hash"], password):
+    if not user or not verify_password(user.get("password_hash", ""), password):
         if is_json_request(request):
             return JSONResponse(status_code=401, content={"error": "Invalid email address or password."})
         return render(request, "login.html", {
@@ -221,24 +220,16 @@ async def handle_register(
             return JSONResponse(status_code=400, content={"error": err})
         return render(request, "register.html", {"error": err, "name": name, "email": email, "title": "Create Account — PocketSmart"})
 
-    conn = get_db_connection()
-    existing = conn.execute("SELECT id FROM users WHERE email = ?", (email.strip().lower(),)).fetchone()
+    existing = get_user_by_email(email.strip().lower())
     if existing:
-        conn.close()
         err = "An account with this email already exists."
         if is_json_request(request):
             return JSONResponse(status_code=400, content={"error": err})
         return render(request, "register.html", {"error": err, "name": name, "title": "Create Account — PocketSmart"})
 
     pwd_hash = hash_password(password)
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-        (name.strip(), email.strip().lower(), pwd_hash)
-    )
-    user_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
+    user = create_user(name.strip(), email.strip().lower(), pwd_hash)
+    user_id = user["id"]
 
     request.session["user_id"] = user_id
     request.session["user_name"] = name.strip()
@@ -260,7 +251,7 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-# Milestone 2.4 & 3.1: Token & Session Endpoints
+# Token & Session Endpoints
 @app.post("/token")
 async def issue_token(request: Request, username: Optional[str] = Form(None), password: Optional[str] = Form(None)):
     email = username
@@ -275,11 +266,9 @@ async def issue_token(request: Request, username: Optional[str] = Form(None), pa
     if not email or not password:
         raise HTTPException(status_code=400, detail="Username/email and password required")
 
-    conn = get_db_connection()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email.strip().lower(),)).fetchone()
-    conn.close()
+    user = get_user_by_email(email.strip().lower())
 
-    if not user or not verify_password(user["password_hash"], password):
+    if not user or not verify_password(user.get("password_hash", ""), password):
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
     token = auth_utils.create_jwt_token({"sub": user["id"], "email": user["email"], "name": user["name"]})
@@ -316,24 +305,17 @@ async def get_session_data(request: Request):
     if not user:
         return JSONResponse(status_code=401, content={"error": "Unauthorized. Please log in."})
 
-    conn = get_db_connection()
-    total_plans = conn.execute("SELECT COUNT(*) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0]
-    total_budget = conn.execute("SELECT SUM(budget) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0] or 0
-    total_saved = conn.execute("SELECT SUM(remaining) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0] or 0
-    recent = conn.execute(
-        "SELECT id, planner_type, title, budget, estimated_cost, remaining, status, created_at FROM planning_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 5",
-        (user["id"],)
-    ).fetchall()
-    conn.close()
+    stats = get_user_stats(user["id"])
+    recent = get_user_planning_history(user["id"], limit=5)
 
     return {
         "user": user,
         "metrics": {
-            "total_plans": total_plans,
-            "total_budgeted": total_budget,
-            "total_saved": total_saved
+            "total_plans": stats["total_plans"],
+            "total_budgeted": stats["total_budgeted"],
+            "total_saved": stats["total_saved"]
         },
-        "recent_plans": [dict(r) for r in recent]
+        "recent_plans": recent
     }
 
 # ==================== DASHBOARD ROUTE ====================
@@ -344,26 +326,14 @@ async def dashboard_page(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-    conn = get_db_connection()
-    total_plans = conn.execute("SELECT COUNT(*) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0]
-    total_budgeted = conn.execute("SELECT SUM(budget) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0] or 0
-    total_saved = conn.execute("SELECT SUM(remaining) FROM planning_history WHERE user_id = ?", (user["id"],)).fetchone()[0] or 0
-
-    recent_history = conn.execute(
-        "SELECT id, planner_type, title, budget, estimated_cost, remaining, status, created_at FROM planning_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 5",
-        (user["id"],)
-    ).fetchall()
-    conn.close()
+    stats = get_user_stats(user["id"])
+    recent_history = get_user_planning_history(user["id"], limit=5)
 
     return render(request, "dashboard.html", {
         "user": user,
         "active_tab": "dashboard",
-        "stats": {
-            "total_plans": total_plans,
-            "total_budgeted": total_budgeted,
-            "total_saved": total_saved
-        },
-        "recent_history": [dict(r) for r in recent_history],
+        "stats": stats,
+        "recent_history": recent_history,
         "title": "Dashboard — PocketSmart"
     })
 
@@ -399,7 +369,6 @@ async def handle_home_planner(
     if not user and not is_json_request(request):
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-    # Check for JSON input
     if is_json_request(request) and budget == 50000.0:
         try:
             body = await request.json()
@@ -432,25 +401,17 @@ async def handle_home_planner(
 
     history_id = None
     if user:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO planning_history (user_id, planner_type, title, budget, estimated_cost, remaining, status, inputs_json, recommendations_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user["id"],
-            "Home Interior",
-            f"{room_type} Interior Plan",
-            result["budget"],
-            result["estimated_total"],
-            result["remaining"],
-            result["status"],
-            json.dumps(input_data),
-            json.dumps(result)
-        ))
-        history_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        history_id = create_planning_history(
+            user_id=user["id"],
+            planner_type="Home Interior",
+            title=f"{room_type} Interior Plan",
+            budget=result["budget"],
+            estimated_cost=result["estimated_total"],
+            remaining=result["remaining"],
+            status=result["status"],
+            inputs_json=input_data,
+            recommendations_json=result
+        )
 
     if is_json_request(request):
         return JSONResponse({
@@ -516,25 +477,17 @@ async def handle_party_planner(
 
     history_id = None
     if user:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO planning_history (user_id, planner_type, title, budget, estimated_cost, remaining, status, inputs_json, recommendations_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user["id"],
-            "Party Planner",
-            f"{event_type} Party Budget",
-            result["budget"],
-            result["estimated_total"],
-            result["remaining"],
-            result["status"],
-            json.dumps(input_data),
-            json.dumps(result)
-        ))
-        history_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        history_id = create_planning_history(
+            user_id=user["id"],
+            planner_type="Party Planner",
+            title=f"{event_type} Party Budget",
+            budget=result["budget"],
+            estimated_cost=result["estimated_total"],
+            remaining=result["remaining"],
+            status=result["status"],
+            inputs_json=input_data,
+            recommendations_json=result
+        )
 
     if is_json_request(request):
         return JSONResponse({
@@ -617,25 +570,17 @@ async def handle_jewelry_planner(
 
     history_id = None
     if user:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO planning_history (user_id, planner_type, title, budget, estimated_cost, remaining, status, inputs_json, recommendations_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user["id"],
-            "Jewelry Planner",
-            f"{occasion} {preferred_style} Jewelry",
-            result["budget"],
-            result["estimated_total"],
-            result["remaining"],
-            result["status"],
-            json.dumps(input_data),
-            json.dumps(result)
-        ))
-        history_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        history_id = create_planning_history(
+            user_id=user["id"],
+            planner_type="Jewelry Planner",
+            title=f"{occasion} {preferred_style} Jewelry",
+            budget=result["budget"],
+            estimated_cost=result["estimated_total"],
+            remaining=result["remaining"],
+            status=result["status"],
+            inputs_json=input_data,
+            recommendations_json=result
+        )
 
     if is_json_request(request):
         return JSONResponse({
@@ -646,7 +591,6 @@ async def handle_jewelry_planner(
 
     return RedirectResponse(url=f"/recommendations/{history_id}", status_code=status.HTTP_302_FOUND)
 
-# Milestone 3.2: General recommendations details endpoint
 @app.post("/recommendations-details")
 @app.get("/recommendations-details")
 async def recommendations_details(
@@ -675,22 +619,18 @@ async def recommendations_details(
 # ==================== RECOMMENDATION RESULTS ====================
 
 @app.get("/recommendations/{history_id}", response_class=HTMLResponse)
-async def view_recommendations(request: Request, history_id: int):
+async def view_recommendations(request: Request, history_id: str):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-    conn = get_db_connection()
-    record = conn.execute("SELECT * FROM planning_history WHERE id = ? AND user_id = ?", (history_id, user["id"])).fetchone()
-    conn.close()
-
+    record = get_planning_history_by_id(history_id, user_id=user["id"])
     if not record:
         raise HTTPException(status_code=404, detail="Planning record not found")
 
-    rec_data = json.loads(record["recommendations_json"])
-    inputs_data = json.loads(record["inputs_json"])
+    rec_data = json.loads(record["recommendations_json"]) if isinstance(record["recommendations_json"], str) else record["recommendations_json"]
+    inputs_data = json.loads(record["inputs_json"]) if isinstance(record["inputs_json"], str) else record["inputs_json"]
 
-    # Ensure items have retailer URLs
     if "items" in rec_data:
         rec_data["items"] = gemini_utils.enrich_items_with_links(rec_data["items"])
 
@@ -700,7 +640,7 @@ async def view_recommendations(request: Request, history_id: int):
 
     return render(request, "recommendations.html", {
         "user": user,
-        "record": dict(record),
+        "record": record,
         "rec": rec_data,
         "inputs": inputs_data,
         "used_percentage": used_percentage,
@@ -717,14 +657,7 @@ async def history_page(request: Request):
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-    conn = get_db_connection()
-    records = conn.execute(
-        "SELECT id, planner_type, title, budget, estimated_cost, remaining, status, created_at FROM planning_history WHERE user_id = ? ORDER BY created_at DESC",
-        (user["id"],)
-    ).fetchall()
-    conn.close()
-
-    history_list = [dict(r) for r in records]
+    history_list = get_user_planning_history(user["id"])
 
     if is_json_request(request):
         return JSONResponse({"status": "success", "count": len(history_list), "history": history_list})
@@ -737,36 +670,26 @@ async def history_page(request: Request):
     })
 
 @app.post("/history/delete/{history_id}")
-async def delete_history_item(request: Request, history_id: int):
+async def delete_history_item(request: Request, history_id: str):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
-    conn = get_db_connection()
-    conn.execute("DELETE FROM planning_history WHERE id = ? AND user_id = ?", (history_id, user["id"]))
-    conn.commit()
-    conn.close()
-
+    delete_planning_history(history_id, user["id"])
     return RedirectResponse(url="/history", status_code=status.HTTP_302_FOUND)
 
-# Milestone 3.4: Startup & Health Diagnostic Endpoint
+# Startup & Health Diagnostic Endpoint
 @app.get("/startup")
 @app.get("/health")
 async def startup_check():
     gemini_status = gemini_utils.validate_gemini_connection()
-    db_ok = False
-    try:
-        conn = get_db_connection()
-        conn.execute("SELECT 1").fetchone()
-        conn.close()
-        db_ok = True
-    except Exception as e:
-        db_error = str(e)
+    db_ok = is_db_connected()
 
     return {
         "status": "online",
         "app": "PocketSmart",
         "database_connected": db_ok,
+        "database_type": "Firebase Cloud Firestore",
         "gemini_ai": gemini_status,
         "supported_platforms": [
             "Amazon", "Flipkart", "IKEA", "Pepperfry", "Urban Ladder",
@@ -778,11 +701,9 @@ async def startup_check():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    # On Render/cloud platforms use 0.0.0.0, locally use 127.0.0.1 so Windows browsers don't fail with ERR_ADDRESS_INVALID
     host = os.environ.get("HOST", "0.0.0.0" if os.environ.get("RENDER") or (os.environ.get("PORT") and not os.name == 'nt') else "127.0.0.1")
     print(f"\n=======================================================")
-    print(f"  PocketSmart is running!")
+    print(f"  PocketSmart is running with Firebase Firestore!")
     print(f"  Open in browser: http://127.0.0.1:{port} or http://localhost:{port}")
     print(f"=======================================================\n")
-    uvicorn.run("main:app", host=host, port=port, reload=True)
-
+    uvicorn.run("backend.main:app", host=host, port=port, reload=True)

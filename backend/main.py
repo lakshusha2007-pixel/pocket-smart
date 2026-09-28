@@ -811,18 +811,20 @@ else:
         "static"
     )
 
-
-UPLOADS_DIR = os.path.join(
-    STATIC_DIR,
-    "uploads"
+UPLOADS_DIR = (
+    "/tmp/uploads"
+    if os.environ.get("VERCEL")
+    else os.path.join(STATIC_DIR, "uploads")
 )
 
-
-# Create directories if they do not exist
-os.makedirs(STATIC_DIR, exist_ok=True)
-os.makedirs(TEMPLATES_DIR, exist_ok=True)
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-
+# Only create writable directories.
+# Vercel deployment filesystem is read-only.
+if not os.environ.get("VERCEL"):
+    os.makedirs(STATIC_DIR, exist_ok=True)
+    os.makedirs(TEMPLATES_DIR, exist_ok=True)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+else:
+    os.makedirs("/tmp/uploads", exist_ok=True)
 
 # ============================================================
 # FASTAPI APPLICATION

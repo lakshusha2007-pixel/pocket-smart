@@ -21,8 +21,8 @@ import recommender
 import gemini_utils
 import auth_utils
 # ==================== DIRECTORIES ====================
+# ==================== DIRECTORIES ====================
 
-# main.py is inside /backend, so move one level up to project root
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Frontend directories
@@ -36,14 +36,19 @@ if not os.path.isdir(TEMPLATES_DIR):
 if not os.path.isdir(STATIC_DIR):
     STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# Vercel filesystem is read-only except /tmp
+# Vercel has a read-only filesystem.
+# Only /tmp can be used for temporary file uploads.
 if os.environ.get("VERCEL"):
     UPLOADS_DIR = "/tmp/uploads"
 else:
     UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
 
-# Only create the writable upload directory
-os.makedirs(UPLOADS_DIR, exist_ok=True)
+# Create upload directory only when it is writable
+try:
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+except OSError:
+    UPLOADS_DIR = "/tmp/uploads"
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 print(f"BASE_DIR: {BASE_DIR}")
 print(f"TEMPLATES_DIR: {TEMPLATES_DIR}")

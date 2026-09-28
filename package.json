@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "PocketSmart — Smart Budget & Recommendation Assistant (Separated Frontend & Backend)",
   "scripts": {
+    "build": "echo PocketSmart build ready",
     "dev": "python backend/main.py",
     "start": "python backend/main.py",
     "server": "python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 --reload",

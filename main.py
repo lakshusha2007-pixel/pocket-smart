@@ -20,23 +20,35 @@ from database import (
 import recommender
 import gemini_utils
 import auth_utils
+# ==================== DIRECTORIES ====================
 
-# Directories
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# main.py is inside /backend, so move one level up to project root
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-if os.path.exists(os.path.join(BASE_DIR, "frontend", "templates")):
-    TEMPLATES_DIR = os.path.join(BASE_DIR, "frontend", "templates")
-    STATIC_DIR = os.path.join(BASE_DIR, "frontend", "static")
-else:
+# Frontend directories
+TEMPLATES_DIR = os.path.join(BASE_DIR, "frontend", "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "frontend", "static")
+
+# Fallback if frontend is located differently
+if not os.path.isdir(TEMPLATES_DIR):
     TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+if not os.path.isdir(STATIC_DIR):
     STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
+# Vercel filesystem is read-only except /tmp
+if os.environ.get("VERCEL"):
+    UPLOADS_DIR = "/tmp/uploads"
+else:
+    UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
 
-os.makedirs(STATIC_DIR, exist_ok=True)
-os.makedirs(TEMPLATES_DIR, exist_ok=True)
+# Only create the writable upload directory
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"TEMPLATES_DIR: {TEMPLATES_DIR}")
+print(f"STATIC_DIR: {STATIC_DIR}")
+print(f"UPLOADS_DIR: {UPLOADS_DIR}")
 # Initialize Database (Firebase Firestore / Fallback)
 init_db()
 

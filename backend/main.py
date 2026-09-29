@@ -62,55 +62,23 @@ ROOT_DIR = os.path.dirname(BACKEND_DIR)
 
 
 # Dynamically resolve frontend templates and static assets
-if os.path.exists(os.path.join(ROOT_DIR, "frontend", "templates")):
+TEMPLATES_CANDIDATES = [
+    os.path.join(ROOT_DIR, "frontend", "templates"),
+    os.path.join(os.getcwd(), "frontend", "templates"),
+    os.path.join(BACKEND_DIR, "templates"),
+    os.path.join(ROOT_DIR, "templates"),
+    os.path.join(os.getcwd(), "templates"),
+]
+TEMPLATES_DIR = next((c for c in TEMPLATES_CANDIDATES if os.path.exists(c)), TEMPLATES_CANDIDATES[0])
 
-    TEMPLATES_DIR = os.path.join(
-        ROOT_DIR,
-        "frontend",
-        "templates"
-    )
-
-    STATIC_DIR = os.path.join(
-        ROOT_DIR,
-        "frontend",
-        "static"
-    )
-
-elif os.path.exists(os.path.join(BACKEND_DIR, "templates")):
-
-    TEMPLATES_DIR = os.path.join(
-        BACKEND_DIR,
-        "templates"
-    )
-
-    STATIC_DIR = os.path.join(
-        BACKEND_DIR,
-        "static"
-    )
-
-elif os.path.exists(os.path.join(ROOT_DIR, "templates")):
-
-    TEMPLATES_DIR = os.path.join(
-        ROOT_DIR,
-        "templates"
-    )
-
-    STATIC_DIR = os.path.join(
-        ROOT_DIR,
-        "static"
-    )
-
-else:
-
-    TEMPLATES_DIR = os.path.join(
-        BACKEND_DIR,
-        "templates"
-    )
-
-    STATIC_DIR = os.path.join(
-        BACKEND_DIR,
-        "static"
-    )
+STATIC_CANDIDATES = [
+    os.path.join(ROOT_DIR, "frontend", "static"),
+    os.path.join(os.getcwd(), "frontend", "static"),
+    os.path.join(BACKEND_DIR, "static"),
+    os.path.join(ROOT_DIR, "static"),
+    os.path.join(os.getcwd(), "static"),
+]
+STATIC_DIR = next((c for c in STATIC_CANDIDATES if os.path.exists(c)), STATIC_CANDIDATES[0])
 
 UPLOADS_DIR = (
     "/tmp/uploads"
@@ -197,6 +165,35 @@ app.add_middleware(
     secret_key=SECRET_KEY,
     max_age=86400 * 7
 )
+
+
+# ============================================================
+# VERCEL PATH REWRITE CORRECTION MIDDLEWARE
+# ============================================================
+
+@app.middleware("http")
+async def vercel_path_corrector(request: Request, call_next):
+    raw_path = request.scope.get("path", "")
+
+    # Check if Vercel passed original URI in proxy headers
+    forwarded_uri = request.headers.get("x-forwarded-uri")
+    matched_path = request.headers.get("x-matched-path")
+
+    user_path = None
+    if forwarded_uri and not forwarded_uri.startswith("/api/index"):
+        user_path = forwarded_uri.split("?")[0]
+    elif matched_path and not matched_path.startswith("/api/index"):
+        user_path = matched_path.split("?")[0]
+
+    if user_path:
+        request.scope["path"] = user_path
+    elif raw_path.startswith("/api/index.py"):
+        suffix = raw_path[len("/api/index.py"):]
+        request.scope["path"] = suffix if suffix else "/"
+    elif raw_path == "/api" or raw_path == "/api/":
+        request.scope["path"] = "/"
+
+    return await call_next(request)
 
 
 # ============================================================
@@ -340,10 +337,10 @@ def is_json_request(
 # LANDING PAGE
 # ============================================================
 
-@app.get(
-    "/",
-    response_class=HTMLResponse
-)
+@app.get("/", response_class=HTMLResponse)
+@app.get("/api/index.py", response_class=HTMLResponse)
+@app.get("/api", response_class=HTMLResponse)
+@app.get("/api/", response_class=HTMLResponse)
 async def root(request: Request):
 
     user = get_current_user(request)

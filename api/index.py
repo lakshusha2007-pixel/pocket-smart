@@ -21,7 +21,19 @@ if "VERCEL" not in os.environ:
 # Import FastAPI application
 # -------------------------------------------------------------------
 try:
+    from fastapi import Request
     from backend.main import app
+
+    @app.get("/api/debug-vercel")
+    async def debug_vercel(request: Request):
+        return {
+            "status": "ok",
+            "scope_path": request.scope.get("path"),
+            "raw_path": request.scope.get("raw_path", b"").decode("utf-8", "ignore"),
+            "headers": dict(request.headers),
+            "cwd": os.getcwd()
+        }
+
 except Exception as exc:
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse

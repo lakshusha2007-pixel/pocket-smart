@@ -173,25 +173,23 @@ app.add_middleware(
 
 @app.middleware("http")
 async def vercel_path_corrector(request: Request, call_next):
-    raw_path = request.scope.get("path", "")
+    # Check if path parameter was passed from Vercel rewrite
+    path_param = request.query_params.get("path")
+    if path_param:
+        request.scope["path"] = path_param
+    else:
+        # Check if Vercel passed original URI in proxy headers
+        forwarded_uri = request.headers.get("x-forwarded-uri")
+        matched_path = request.headers.get("x-matched-path")
 
-    # Check if Vercel passed original URI in proxy headers
-    forwarded_uri = request.headers.get("x-forwarded-uri")
-    matched_path = request.headers.get("x-matched-path")
+        user_path = None
+        if forwarded_uri and not forwarded_uri.startswith("/api/index"):
+            user_path = forwarded_uri.split("?")[0]
+        elif matched_path and not matched_path.startswith("/api/index"):
+            user_path = matched_path.split("?")[0]
 
-    user_path = None
-    if forwarded_uri and not forwarded_uri.startswith("/api/index"):
-        user_path = forwarded_uri.split("?")[0]
-    elif matched_path and not matched_path.startswith("/api/index"):
-        user_path = matched_path.split("?")[0]
-
-    if user_path:
-        request.scope["path"] = user_path
-    elif raw_path.startswith("/api/index.py"):
-        suffix = raw_path[len("/api/index.py"):]
-        request.scope["path"] = suffix if suffix else "/"
-    elif raw_path == "/api" or raw_path == "/api/":
-        request.scope["path"] = "/"
+        if user_path:
+            request.scope["path"] = user_path
 
     return await call_next(request)
 

@@ -11,3 +11,5 @@ Dockerfile
 Procfile
 render.yaml
 *.log
+package.json
+package-lock.json
